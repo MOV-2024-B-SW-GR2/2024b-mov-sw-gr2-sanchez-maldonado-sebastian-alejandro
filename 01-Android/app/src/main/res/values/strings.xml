@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">gr2sw2024b_sasm</string>
+    <string name="saludo">Hello World</string>
+    <color name="saludo_color">#964800</color>
 </resources>
