@@ -74,5 +74,3 @@
 - Ejemplo: "Por favor, selecciona al menos un héroe enemigo antes de continuar."
 
 ---
-
-Estas historias de usuario son suficientes para construir el núcleo funcional de la aplicación. ¿Quieres agregar algo más, como el diseño de la interfaz o flujos específicos? 
