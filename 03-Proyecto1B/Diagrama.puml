@@ -3,33 +3,17 @@ entity "Heroes" {
     * heroe_id : Integer [PK]
     --
     nombre : String
-    roles : String
-    tasa_victoria : Float
 }
 
-entity "Counters" {
-    * counter_id : Integer [PK]
+entity "Matchups" {
+    * matchup_id : Integer [PK]
     --
     heroe_id : Integer [FK]
-    counter_heroe_id : Integer [FK]
-    efectividad : Float
+    enemigo_id : Integer [FK]
+    games_played : Integer
+    wins : Integer
+    winrate : Float [calculated]
 }
 
-entity "Roles" {
-    * rol_id : Integer [PK]
-    --
-    nombre : String
-}
-
-entity "Estadisticas" {
-    * estadistica_id : Integer [PK]
-    --
-    heroe_id : Integer [FK]
-    rol_id : Integer [FK]
-    tasa_victoria : Float
-}
-
-Heroes ||--o{ "Counters" : counter
-Roles ||--o{ "Estadisticas" : define
-Heroes ||--o{ "Estadisticas" : tiene
+Heroes ||--o{ "Matchups" : enfrentamientos
 @enduml
