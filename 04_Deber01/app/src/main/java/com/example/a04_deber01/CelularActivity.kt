@@ -1,5 +1,6 @@
 package com.example.a04_deber01
 
+import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Intent
 import android.os.Bundle
@@ -11,19 +12,23 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import com.example.a04_deber01.database.DatabaseHelper
 
-
 class CelularActivity : ComponentActivity() {
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var editMarca: EditText
     private lateinit var editModelo: EditText
     private lateinit var editPrecio: EditText
+    private lateinit var editLatitud: EditText
+    private lateinit var editLongitud: EditText
     private lateinit var btnGuardar: Button
     private lateinit var btnEliminar: Button
+    private lateinit var btnVerMapa: Button
+    private lateinit var btnVerAplicativos: Button
     private lateinit var listView: ListView
     private lateinit var adapter: ArrayAdapter<String>
     private val celularesList = mutableListOf<String>()
     private var selectedId: Int? = null  // Para saber qué registro se está editando/eliminando
 
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_celular)
@@ -33,8 +38,12 @@ class CelularActivity : ComponentActivity() {
         editMarca = findViewById(R.id.editMarca)
         editModelo = findViewById(R.id.editModelo)
         editPrecio = findViewById(R.id.editPrecio)
+        editLatitud = findViewById(R.id.editLatitud)
+        editLongitud = findViewById(R.id.editLongitud)
         btnGuardar = findViewById(R.id.btnGuardar)
         btnEliminar = findViewById(R.id.btnEliminar)
+        btnVerMapa = findViewById(R.id.btnVerMapa)
+        btnVerAplicativos = findViewById(R.id.btnVerAplicativos)
         listView = findViewById(R.id.listViewCelulares)
 
         // Cargar celulares desde la base de datos
@@ -54,7 +63,22 @@ class CelularActivity : ComponentActivity() {
             eliminarCelular()
         }
 
-        // Permitir selección para editar/eliminar
+        // Botón para abrir el mapa con la ubicación guardada
+        btnVerMapa.setOnClickListener {
+            val latitud = editLatitud.text.toString().toDoubleOrNull()
+            val longitud = editLongitud.text.toString().toDoubleOrNull()
+
+            if (latitud != null && longitud != null) {
+                val intent = Intent(this, MapaActivity::class.java)
+                intent.putExtra("LATITUD", latitud)
+                intent.putExtra("LONGITUD", longitud)
+                startActivity(intent)
+            } else {
+                Toast.makeText(this, "No hay coordenadas guardadas", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Permitir selección para editar/eliminar/ver aplicativos
         listView.setOnItemClickListener { _, _, position, _ ->
             val selectedItem = celularesList[position]
             val parts = selectedItem.split(" - ") // Formato: "ID - Marca Modelo - $Precio"
@@ -63,13 +87,23 @@ class CelularActivity : ComponentActivity() {
             editModelo.setText(parts[1].split(" ")[1])
             editPrecio.setText(parts[2].replace("$", ""))
 
-            btnGuardar.text = "Actualizar"  // Cambiar el texto del botón
-            btnEliminar.visibility = Button.VISIBLE  // Mostrar el botón Eliminar
+            // Obtener la latitud y longitud desde la base de datos
+            val db = dbHelper.readableDatabase
+            val cursor = db.rawQuery("SELECT latitud, longitud FROM Celular WHERE id=?", arrayOf(selectedId.toString()))
+            if (cursor.moveToFirst()) {
+                editLatitud.setText(cursor.getString(0) ?: "")
+                editLongitud.setText(cursor.getString(1) ?: "")
+            }
+            cursor.close()
+            db.close()
+
+            btnGuardar.text = "Actualizar"
+            btnEliminar.visibility = Button.VISIBLE
+            btnVerAplicativos.visibility = Button.VISIBLE
+            btnVerMapa.visibility = Button.VISIBLE
         }
 
-        val btnVerAplicativos = findViewById<Button>(R.id.btnVerAplicativos)
-
-        // Permitir abrir la lista de aplicativos del celular seleccionado
+        // Abrir la lista de aplicativos del celular seleccionado
         btnVerAplicativos.setOnClickListener {
             selectedId?.let { celularId ->
                 val intent = Intent(this, AplicativoActivity::class.java)
@@ -77,27 +111,14 @@ class CelularActivity : ComponentActivity() {
                 startActivity(intent)
             }
         }
-
-        // Mostrar el botón "Ver Aplicativos" cuando se selecciona un celular
-        listView.setOnItemClickListener { _, _, position, _ ->
-            val selectedItem = celularesList[position]
-            val parts = selectedItem.split(" - ")
-            selectedId = parts[0].toInt()
-            editMarca.setText(parts[1].split(" ")[0])
-            editModelo.setText(parts[1].split(" ")[1])
-            editPrecio.setText(parts[2].replace("$", ""))
-
-            btnGuardar.text = "Actualizar"
-            btnEliminar.visibility = Button.VISIBLE
-            btnVerAplicativos.visibility = Button.VISIBLE // Mostrar el botón
-        }
-
     }
 
     private fun agregarCelular() {
         val marca = editMarca.text.toString()
         val modelo = editModelo.text.toString()
         val precio = editPrecio.text.toString()
+        val latitud = editLatitud.text.toString().toDoubleOrNull()
+        val longitud = editLongitud.text.toString().toDoubleOrNull()
 
         if (marca.isNotEmpty() && modelo.isNotEmpty() && precio.isNotEmpty()) {
             val db = dbHelper.writableDatabase
@@ -105,6 +126,8 @@ class CelularActivity : ComponentActivity() {
                 put("marca", marca)
                 put("modelo", modelo)
                 put("precio", precio.toDouble())
+                put("latitud", latitud)
+                put("longitud", longitud)
             }
             db.insert("Celular", null, values)
             db.close()
@@ -119,6 +142,8 @@ class CelularActivity : ComponentActivity() {
         val marca = editMarca.text.toString()
         val modelo = editModelo.text.toString()
         val precio = editPrecio.text.toString()
+        val latitud = editLatitud.text.toString().toDoubleOrNull()
+        val longitud = editLongitud.text.toString().toDoubleOrNull()
 
         if (selectedId != null && marca.isNotEmpty() && modelo.isNotEmpty() && precio.isNotEmpty()) {
             val db = dbHelper.writableDatabase
@@ -126,6 +151,8 @@ class CelularActivity : ComponentActivity() {
                 put("marca", marca)
                 put("modelo", modelo)
                 put("precio", precio.toDouble())
+                put("latitud", latitud)
+                put("longitud", longitud)
             }
             db.update("Celular", values, "id=?", arrayOf(selectedId.toString()))
             db.close()
@@ -172,8 +199,12 @@ class CelularActivity : ComponentActivity() {
         editMarca.text.clear()
         editModelo.text.clear()
         editPrecio.text.clear()
-        btnGuardar.text = "Guardar" // Restaurar el botón a su estado original
-        btnEliminar.visibility = Button.GONE // Ocultar el botón Eliminar
+        editLatitud.text.clear()
+        editLongitud.text.clear()
+        btnGuardar.text = "Guardar"
+        btnEliminar.visibility = Button.GONE
+        btnVerMapa.visibility = Button.GONE
+        btnVerAplicativos.visibility = Button.GONE
         selectedId = null
     }
 }
